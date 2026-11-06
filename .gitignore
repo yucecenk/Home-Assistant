@@ -1,0 +1,23 @@
+# --- GİZLİ BİLGİLER: asla GitHub'a gitmesin ---
+.env
+devices.json
+snapshot.json
+tinytuya.json
+tuya-raw.json
+
+# --- Sanal ortam ve önbellek ---
+.venv*/
+venv/
+__pycache__/
+*.pyc
+
+# --- Büyük ses modeli (README'deki bağlantılardan indirilir) ---
+sesler/*.onnx
+sesler/*.onnx.json
+
+# --- Editör / sistem ---
+.vscode/
+.idea/
+*.log
+Thumbs.db
+.DS_Store

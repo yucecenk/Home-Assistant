@@ -1,0 +1,23 @@
+# İTO — Docker Compose
+#
+#   docker compose up --build     (ilk sefer ya da kod değişince)
+#   docker compose up             (sonraki seferler)
+#   docker compose down           (durdur)
+#
+# Varsayılan: YAZI MODU. Docker Desktop'taki konteyner Windows'un mikrofonuna ve
+# hoparlörüne erişemez; komutlar panelden yazılır, cevaplar panelde görünür.
+# Groq, panel ve gerçek ampul normal çalışır.
+
+services:
+  ito:
+    build: .
+    image: ito-asistan
+    container_name: ito
+    # GROQ_API_KEY, GROQ_MODEL ve TUYA_* ayarları buradan okunur
+    env_file: .env
+    environment:
+      ITO_SES: "0"
+    ports:
+      # Sadece bu bilgisayardan erişilsin: panel şifresiz ve kapı kilidini yönetiyor
+      - "127.0.0.1:8765:8765"
+    restart: "no"

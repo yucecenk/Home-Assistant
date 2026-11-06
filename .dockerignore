@@ -1,0 +1,17 @@
+# Sanal ortamlar ve önbellek (imaja girmesin, Windows'a özel)
+.venv*/
+__pycache__/
+*.pyc
+
+# Gizli bilgiler: imaja gömülmez, compose .env'den okur
+.env
+devices.json
+snapshot.json
+tinytuya.json
+tuya-raw.json
+
+# Gereksizler
+*.png
+*.log
+.vscode/
+.git/

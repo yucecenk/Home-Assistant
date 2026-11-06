@@ -1,0 +1,15 @@
+# DENEYSEL: Docker içinde sesli mod (WSLg'nin PulseAudio sunucusu üzerinden)
+#
+# Sadece WSL2 + WSLg kurulu Windows'ta çalışır ve WSL terminalinden (Ubuntu) başlatılmalı:
+#   docker compose -f docker-compose.yml -f docker-compose.ses.yml up --build
+#
+# Hoparlör genelde çalışır; mikrofon WSLg sürümüne göre çalışmayabilir.
+# Sesli kullanım için asıl önerilen yol: python main.py (Docker'sız).
+
+services:
+  ito:
+    environment:
+      ITO_SES: "1"
+      PULSE_SERVER: unix:/mnt/wslg/PulseServer
+    volumes:
+      - /mnt/wslg/:/mnt/wslg/

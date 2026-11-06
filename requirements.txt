@@ -1,0 +1,6 @@
+openai>=1.40
+python-dotenv>=1.0
+sounddevice>=0.4.6
+webrtcvad-wheels>=2.0.11
+piper-tts>=1.2
+tinytuya>=1.13

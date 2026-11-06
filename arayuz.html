@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İTO Ev Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gece: #1F2230;        /* zemin: gece evi */
+    --zemin: #282C3C;       /* ışığı kapalı oda zemini */
+    --siva: #E9E3D6;        /* duvarlar ve ana yazı */
+    --siva-soluk: #A8A497;  /* ikincil yazı */
+    --kehribar: #F2B33D;    /* İTO'nun sesi, seçim, odak */
+    --hata: #FF7A6B;
+    --panel: #252937;
+    --cizgi: #3A3F52;
+    --yaricap-oda: 4px;
+    --yaricap-kontrol: 10px;
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    font-feature-settings: "tnum";
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--gece); color: var(--siva); }
+  body { min-height: 100vh; font-size: 16px; line-height: 1.45; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--kehribar); outline-offset: 2px; }
+
+  /* ---------- düzen ---------- */
+  .sayfa {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 24px;
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  @media (max-width: 900px) {
+    .sayfa { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+  }
+
+  /* ---------- üst: İTO durumu ---------- */
+  .ust { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; }
+  .ust h1 { font-size: 2rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .ito-durum { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  .ses-halkasi {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid var(--cizgi); display: grid; place-items: center;
+    transition: border-color .3s, background-color .3s;
+  }
+  .ses-halkasi i { width: 14px; height: 14px; border-radius: 50%; background: var(--siva-soluk); transition: background-color .3s, transform .3s; }
+  .ito-durum[data-durum="dinliyor"] .ses-halkasi { border-color: var(--siva-soluk); }
+  .ito-durum[data-durum="dinliyor"] .ses-halkasi i { animation: nefes 2.4s ease-in-out infinite; background: var(--siva); }
+  .ito-durum[data-durum="dusunuyor"] .ses-halkasi { border-color: var(--kehribar); border-top-color: transparent; animation: don 0.9s linear infinite; }
+  .ito-durum[data-durum="dusunuyor"] .ses-halkasi i { animation: don 0.9s linear infinite reverse; background: var(--kehribar); }
+  .ito-durum[data-durum="konusuyor"] .ses-halkasi { border-color: var(--kehribar); background: rgba(242,179,61,.15); }
+  .ito-durum[data-durum="konusuyor"] .ses-halkasi i { background: var(--kehribar); transform: scale(1.4); }
+  .ito-durum[data-durum="baglanti-yok"] .ses-halkasi i { background: var(--hata); }
+  .ito-durum[data-durum="uyuyor"] .ses-halkasi { border-style: dashed; }
+  .ito-durum[data-durum="uyuyor"] .ses-halkasi i { transform: scale(.6); opacity: .6; }
+  .ito-durum[data-durum="uyuyor"] .durum-yazi { color: var(--siva-soluk); }
+  .durum-yazi { font-size: 1.05rem; font-weight: 500; }
+  @keyframes nefes { 50% { transform: scale(1.35); opacity: .6; } }
+  @keyframes don { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .ses-halkasi, .ses-halkasi i { animation: none !important; }
+  }
+
+  /* ---------- kat planı ---------- */
+  .plan-kutu { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .plan {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.35fr 1fr 0.75fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 4px;                       /* iç duvarlar */
+    padding: 4px;                   /* dış duvar */
+    background: var(--siva);
+    border-radius: var(--yaricap-oda);
+    aspect-ratio: 16 / 10;
+    min-height: 340px;
+  }
+  .oda {
+    position: relative;
+    border: 0; margin: 0;
+    background: var(--zemin);
+    text-align: left;
+    padding: 18px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background .5s ease;
+  }
+  .oda[data-oda="salon"] { grid-column: 1; grid-row: 1 / 3; }
+  .oda[data-oda="yatak_odasi"] { grid-column: 2 / 4; grid-row: 1; }
+  .oda[data-oda="mutfak"] { grid-column: 2; grid-row: 2; }
+  .oda[data-oda="banyo"] { grid-column: 3; grid-row: 2; }
+  /* telefon: odalar üst üste (masaüstü kurallarından SONRA gelmeli) */
+  @media (max-width: 600px) {
+    .plan { grid-template-columns: 1fr 1fr; grid-template-rows: 1.3fr 1fr 1fr; aspect-ratio: auto; min-height: 520px; }
+    .oda[data-oda="salon"] { grid-column: 1 / -1; grid-row: 1; }
+    .oda[data-oda="yatak_odasi"] { grid-column: 1 / -1; grid-row: 2; }
+    .oda[data-oda="mutfak"] { grid-column: 1; grid-row: 3; }
+    .oda[data-oda="banyo"] { grid-column: 2; grid-row: 3; }
+    .kapi { left: 8%; width: 30%; }
+  }
+  .oda[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--kehribar); }
+  .oda-ad { font-size: clamp(1.4rem, 2.6vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  .oda-bilgi { font-size: .9rem; color: var(--siva-soluk); display: flex; flex-direction: column; gap: 2px; }
+  .oda.isikli .oda-bilgi { color: var(--siva); }
+  .oda.isikli .oda-ad, .oda.isikli .oda-bilgi { text-shadow: 0 1px 8px rgba(0,0,0,.55); }
+  .rozet {
+    align-self: flex-start;
+    font-size: .78rem; font-weight: 500;
+    padding: 2px 8px; border-radius: 999px;
+    background: rgba(242,179,61,.18); color: var(--kehribar);
+    margin-top: 6px;
+  }
+  .rozet.kopuk { background: rgba(255,122,107,.18); color: var(--hata); }
+  /* dış kapı: salonun alt duvarında bir açıklık */
+  .kapi {
+    position: absolute; left: 12%; bottom: -4px;
+    width: 18%; height: 8px; padding: 0;
+    background: var(--gece); border: 0; cursor: pointer;
+  }
+  .kapi::after {
+    content: attr(data-etiket);
+    position: absolute; top: 12px; left: 0;
+    font-size: .8rem; white-space: nowrap; color: var(--siva-soluk);
+  }
+  .kapi.acik { background: var(--hata); }
+  .kapi.acik::after { color: var(--hata); }
+  .plan-not { font-size: .85rem; color: var(--siva-soluk); margin: 28px 0 0; }
+
+  /* ---------- sağ sütun ---------- */
+  .yan { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .kontrol, .sohbet {
+    background: var(--panel);
+    border: 1px solid var(--cizgi);
+    border-radius: var(--yaricap-kontrol);
+    padding: 18px;
+  }
+  .kontrol h2 { font-size: 1.35rem; margin: 0 0 14px; font-weight: 700; }
+  .cihaz { padding: 12px 0; border-top: 1px solid var(--cizgi); display: grid; gap: 10px; }
+  .cihaz:first-of-type { border-top: 0; padding-top: 0; }
+  .cihaz-ust { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .cihaz-ad { font-weight: 500; }
+  .anahtar {
+    min-width: 76px; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--cizgi); background: transparent; cursor: pointer;
+  }
+  .anahtar[aria-pressed="true"] { background: var(--siva); color: var(--gece); border-color: var(--siva); }
+  .renkler { display: flex; gap: 8px; flex-wrap: wrap; }
+  .renk {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .renk[aria-pressed="true"] { border-color: var(--siva); }
+  .satir { display: flex; align-items: center; gap: 12px; }
+  .satir label { min-width: 74px; color: var(--siva-soluk); font-size: .9rem; }
+  input[type="range"] { flex: 1; accent-color: var(--kehribar); }
+  .deger { min-width: 44px; text-align: right; }
+  .secenekler { display: flex; border: 1px solid var(--cizgi); border-radius: 999px; overflow: hidden; }
+  .secenekler button { flex: 1; padding: 6px 10px; border: 0; background: transparent; cursor: pointer; font-size: .9rem; }
+  .secenekler button[aria-pressed="true"] { background: var(--siva); color: var(--gece); }
+  .adim { display: flex; align-items: center; gap: 10px; }
+  .adim button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--cizgi); background: transparent; cursor: pointer; font-size: 1.1rem; }
+  .adim .derece { font-size: 1.6rem; font-weight: 700; min-width: 64px; text-align: center; }
+  .pasif { opacity: .45; }
+
+  /* ---------- sohbet ---------- */
+  .sohbet { display: flex; flex-direction: column; min-height: 280px; flex: 1; }
+  .akis { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; max-height: 46vh; }
+  .mesaj { max-width: 88%; padding: 8px 12px; border-radius: 12px; }
+  .mesaj small { display: block; font-size: .75rem; color: var(--siva-soluk); margin-top: 2px; }
+  .mesaj.kullanici { align-self: flex-end; background: #343A4F; border-bottom-right-radius: 4px; }
+  .mesaj.ito { align-self: flex-start; background: rgba(242,179,61,.14); border-bottom-left-radius: 4px; }
+  .mesaj.ito.kesildi { opacity: .6; }
+  .mesaj.arac, .mesaj.bilgi { align-self: center; max-width: 100%; font-size: .85rem; color: var(--siva-soluk); padding: 2px 8px; text-align: center; }
+  .mesaj.arac.hata { color: var(--hata); }
+  .bos { color: var(--siva-soluk); margin: auto; text-align: center; max-width: 30ch; }
+  .yaz { display: flex; gap: 8px; margin-top: 12px; }
+  .yaz input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--cizgi); background: var(--gece); }
+  .yaz button { padding: 10px 18px; border-radius: 999px; border: 0; background: var(--kehribar); color: var(--gece); font-weight: 700; cursor: pointer; }
+  .uyari { grid-column: 1 / -1; background: rgba(255,122,107,.12); color: var(--hata); padding: 10px 14px; border-radius: var(--yaricap-kontrol); display: none; }
+  .uyari.goster { display: block; }
+</style>
+</head>
+<body>
+<div class="sayfa">
+  <header class="ust">
+    <h1>İTO</h1>
+    <div class="ito-durum" id="itoDurum" data-durum="baglanti-yok" aria-live="polite">
+      <div class="ses-halkasi" aria-hidden="true"><i></i></div>
+      <span class="durum-yazi" id="durumYazi">Bağlanıyor</span>
+    </div>
+  </header>
+
+  <div class="uyari" id="uyari" role="alert">İTO'ya ulaşılamıyor. Terminalde <b>python main.py</b> çalışıyor mu?</div>
+
+  <section class="plan-kutu" aria-label="Kat planı">
+    <div class="plan" id="plan">
+      <button class="oda" data-oda="salon" aria-pressed="true"></button>
+      <button class="oda" data-oda="yatak_odasi" aria-pressed="false"></button>
+      <button class="oda" data-oda="mutfak" aria-pressed="false"></button>
+      <button class="oda" data-oda="banyo" aria-pressed="false"></button>
+      <button class="kapi" id="kapi" data-etiket="Dış kapı" aria-label="Dış kapı kilidi"></button>
+    </div>
+    <p class="plan-not">Bir odaya dokunarak kontrollerini aç. Sesle ya da yazıyla verdiğin komutlar burada anında görünür.</p>
+  </section>
+
+  <aside class="yan">
+    <section class="kontrol" id="kontrol" aria-live="off"></section>
+    <section class="sohbet" aria-label="İTO ile konuşma">
+      <div class="akis" id="akis" aria-live="polite">
+        <p class="bos" id="bos">Henüz konuşma yok. "Hey İTO, salonun ışığını mavi yap" demeyi dene.</p>
+      </div>
+      <form class="yaz" id="yazForm">
+        <input id="yazGirdi" type="text" autocomplete="off" placeholder="İTO'ya yaz…" aria-label="İTO'ya yazılı komut">
+        <button type="submit">Gönder</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<script>
+const ODALAR = {
+  salon: "Salon", yatak_odasi: "Yatak odası", mutfak: "Mutfak", banyo: "Banyo",
+};
+const RENKLER = {   // ampulün gerçek görünüşüne yakın tonlar
+  beyaz: ["#FFF1D6", "Beyaz"], sari: ["#FFD84A", "Sarı"], turuncu: ["#FF8A2A", "Turuncu"],
+  kirmizi: ["#FF4B3E", "Kırmızı"], mor: ["#A95CFF", "Mor"], mavi: ["#3E7BFF", "Mavi"],
+  yesil: ["#3EDB7A", "Yeşil"],
+};
+const MODLAR = { otomatik: "Otomatik", isitma: "Isıtma", sogutma: "Soğutma" };
+const DURUM_YAZI = {
+  dinliyor: "Dinliyorum", dusunuyor: "Düşünüyorum", konusuyor: "Konuşuyorum",
+  yazi: "Yazı modu", uyuyor: '"Hey İTO" de',
+  "baglanti-yok": "Bağlantı yok", hazir: "Hazırlanıyor",
+};
+
+let ev = null, gercekOda = null, ampulBagli = false, seciliOda = "salon", sonOlay = 0;
+
+// ---------------- sunucu ----------------
+async function arac(isim, arg) {
+  try {
+    const r = await fetch("/api/arac", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isim, arg }) });
+    await r.json();
+    yokla();
+  } catch { baglantiYok(); }
+}
+
+async function yokla() {
+  try {
+    const r = await fetch(`/api/durum?son=${sonOlay}`, { cache: "no-store" });
+    const v = await r.json();
+    document.getElementById("uyari").classList.remove("goster");
+    ev = v.ev; gercekOda = v.gercek_oda; ampulBagli = v.ampul_bagli;
+    durumGoster(v.durum);
+    planCiz();
+    kontrolGuncelle();
+    v.olaylar.forEach(olayEkle);
+    sonOlay = v.son;
+  } catch { baglantiYok(); }
+}
+function baglantiYok() {
+  document.getElementById("uyari").classList.add("goster");
+  durumGoster("baglanti-yok");
+}
+
+// ---------------- İTO durumu ----------------
+function durumGoster(d) {
+  const el = document.getElementById("itoDurum");
+  if (el.dataset.durum === d) return;
+  el.dataset.durum = d;
+  document.getElementById("durumYazi").textContent = DURUM_YAZI[d] || d;
+}
+
+// ---------------- kat planı ----------------
+function hexRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`;
+}
+function planCiz() {
+  document.querySelectorAll(".oda").forEach(btn => {
+    const oda = btn.dataset.oda;
+    const isik = ev.isiklar[oda], klima = ev.klimalar[oda];
+    const yanik = isik.acik && isik.parlaklik > 0;
+    btn.classList.toggle("isikli", yanik);
+    if (yanik) {
+      const renk = RENKLER[isik.renk]?.[0] || "#FFF1D6";
+      const g = 0.18 + 0.62 * isik.parlaklik / 100;
+      btn.style.background = `radial-gradient(ellipse at 50% 40%, ${hexRgba(renk, g)} 0%, ${hexRgba(renk, g * 0.35)} 55%, transparent 85%), var(--zemin)`;
+    } else {
+      btn.style.background = "";
+    }
+    const satirlar = [
+      yanik ? `Işık ${RENKLER[isik.renk]?.[1].toLowerCase() || ""}, %${isik.parlaklik}` : "Işık kapalı",
+      klima.acik ? `Klima ${klima.hedef_sicaklik}°, ${MODLAR[klima.mod].toLowerCase()}` : "Klima kapalı",
+    ];
+    if (oda in ev.perdeler) satirlar.push(ev.perdeler[oda] === 0 ? "Perde kapalı" : `Perde %${ev.perdeler[oda]} açık`);
+    if (oda === "salon") satirlar.push(ev.tv.acik ? `TV açık, ses ${ev.tv.ses}` : "TV kapalı");
+    const rozet = oda !== gercekOda ? "" : ampulBagli
+      ? `<span class="rozet">Gerçek ampul bağlı</span>`
+      : `<span class="rozet kopuk">Ampule ulaşılamıyor</span>`;
+    const html = `<span class="oda-ad">${ODALAR[oda]}</span><span class="oda-bilgi">${satirlar.map(s => `<span>${s}</span>`).join("")}${rozet}</span>`;
+    if (btn.innerHTML !== html) btn.innerHTML = html;
+    btn.setAttribute("aria-label", `${ODALAR[oda]}: ${satirlar.join(", ")}`);
+    btn.setAttribute("aria-pressed", oda === seciliOda);
+  });
+  const kapi = document.getElementById("kapi");
+  kapi.classList.toggle("acik", !ev.kapi_kilidi);
+  kapi.dataset.etiket = ev.kapi_kilidi ? "Dış kapı kilitli" : "Dış kapı açık";
+}
+
+document.querySelectorAll(".oda").forEach(btn => btn.addEventListener("click", () => {
+  seciliOda = btn.dataset.oda;
+  kontrolKur();
+  planCiz();
+}));
+document.getElementById("kapi").addEventListener("click", e => {
+  e.stopPropagation();
+  arac("kapi_kilidi", { kilitli: !ev.kapi_kilidi });
+});
+
+// ---------------- kontroller ----------------
+function kontrolKur() {
+  const oda = seciliOda;
+  const k = document.getElementById("kontrol");
+  let html = `<h2>${ODALAR[oda]}</h2>
+  <div class="cihaz" id="c-isik">
+    <div class="cihaz-ust"><span class="cihaz-ad">Işık</span><button class="anahtar" data-is="isik-ac"></button></div>
+    <div class="renkler" role="group" aria-label="Işık rengi">
+      ${Object.entries(RENKLER).map(([k, [hex, ad]]) => `<button class="renk" data-renk="${k}" style="background:${hex}" aria-label="${ad}" title="${ad}"></button>`).join("")}
+    </div>
+    <div class="satir"><label for="parlaklik">Parlaklık</label><input id="parlaklik" type="range" min="1" max="100" step="1"><span class="deger" id="parlaklikDeger"></span></div>
+  </div>
+  <div class="cihaz" id="c-klima">
+    <div class="cihaz-ust"><span class="cihaz-ad">Klima</span><button class="anahtar" data-is="klima-ac"></button></div>
+    <div class="secenekler" role="group" aria-label="Klima modu">
+      ${Object.entries(MODLAR).map(([k, ad]) => `<button data-mod="${k}">${ad}</button>`).join("")}
+    </div>
+    <div class="adim"><button data-is="derece-" aria-label="Sıcaklığı azalt">−</button><span class="derece" id="derece"></span><button data-is="derece+" aria-label="Sıcaklığı artır">+</button></div>
+  </div>`;
+  if (oda in ev.perdeler) html += `
+  <div class="cihaz"><div class="satir"><label for="perde">Perde</label><input id="perde" type="range" min="0" max="100" step="10"><span class="deger" id="perdeDeger"></span></div></div>`;
+  if (oda === "salon") html += `
+  <div class="cihaz">
+    <div class="cihaz-ust"><span class="cihaz-ad">Televizyon</span><button class="anahtar" data-is="tv-ac"></button></div>
+    <div class="satir"><label for="tvSes">Ses</label><input id="tvSes" type="range" min="0" max="100" step="5"><span class="deger" id="tvSesDeger"></span></div>
+  </div>`;
+  k.innerHTML = html;
+
+  k.querySelector('[data-is="isik-ac"]').onclick = () => arac("isik_ayarla", { oda, acik: !ev.isiklar[oda].acik });
+  k.querySelectorAll(".renk").forEach(b => b.onclick = () => arac("isik_ayarla", { oda, renk: b.dataset.renk }));
+  const p = k.querySelector("#parlaklik");
+  p.oninput = () => k.querySelector("#parlaklikDeger").textContent = `%${p.value}`;
+  p.onchange = () => arac("isik_ayarla", { oda, parlaklik: +p.value });
+
+  k.querySelector('[data-is="klima-ac"]').onclick = () => arac("klima_ayarla", { oda, acik: !ev.klimalar[oda].acik });
+  k.querySelectorAll("[data-mod]").forEach(b => b.onclick = () => arac("klima_ayarla", { oda, mod: b.dataset.mod }));
+  k.querySelector('[data-is="derece-"]').onclick = () => arac("klima_ayarla", { oda, sicaklik: Math.max(16, ev.klimalar[oda].hedef_sicaklik - 1) });
+  k.querySelector('[data-is="derece+"]').onclick = () => arac("klima_ayarla", { oda, sicaklik: Math.min(30, ev.klimalar[oda].hedef_sicaklik + 1) });
+
+  const perde = k.querySelector("#perde");
+  if (perde) {
+    perde.oninput = () => k.querySelector("#perdeDeger").textContent = `%${perde.value}`;
+    perde.onchange = () => arac("perde_ayarla", { oda, aciklik: +perde.value });
+  }
+  const tv = k.querySelector('[data-is="tv-ac"]');
+  if (tv) {
+    tv.onclick = () => arac("tv_ayarla", { acik: !ev.tv.acik });
+    const s = k.querySelector("#tvSes");
+    s.oninput = () => k.querySelector("#tvSesDeger").textContent = s.value;
+    s.onchange = () => arac("tv_ayarla", { ses: +s.value });
+  }
+  kontrolGuncelle();
+}
+
+function kontrolGuncelle() {
+  const k = document.getElementById("kontrol");
+  if (!ev) return;
+  if (!k.firstChild) { kontrolKur(); return; }
+  const oda = seciliOda, isik = ev.isiklar[oda], klima = ev.klimalar[oda];
+  const anahtar = (sec, acik) => { const b = k.querySelector(sec); if (b) { b.textContent = acik ? "Açık" : "Kapalı"; b.setAttribute("aria-pressed", acik); } };
+  const kaydirici = (sec, deger, yazi) => { const el = k.querySelector(sec); if (el && document.activeElement !== el) { el.value = deger; k.querySelector(sec + "Deger").textContent = yazi; } };
+
+  anahtar('[data-is="isik-ac"]', isik.acik);
+  k.querySelectorAll(".renk").forEach(b => b.setAttribute("aria-pressed", isik.acik && b.dataset.renk === isik.renk));
+  kaydirici("#parlaklik", isik.parlaklik, `%${isik.parlaklik}`);
+  k.querySelector("#c-isik .renkler").classList.toggle("pasif", !isik.acik);
+
+  anahtar('[data-is="klima-ac"]', klima.acik);
+  k.querySelectorAll("[data-mod]").forEach(b => b.setAttribute("aria-pressed", klima.acik && b.dataset.mod === klima.mod));
+  k.querySelector("#derece").textContent = `${klima.hedef_sicaklik}°`;
+  k.querySelector("#c-klima .adim").classList.toggle("pasif", !klima.acik);
+
+  if (oda in ev.perdeler) kaydirici("#perde", ev.perdeler[oda], `%${ev.perdeler[oda]}`);
+  if (oda === "salon") { anahtar('[data-is="tv-ac"]', ev.tv.acik); kaydirici("#tvSes", ev.tv.ses, `${ev.tv.ses}`); }
+}
+
+// ---------------- sohbet akışı ----------------
+function olayEkle(o) {
+  const akis = document.getElementById("akis");
+  document.getElementById("bos")?.remove();
+  const el = document.createElement("div");
+  el.className = `mesaj ${o.tur}` + (o.kesildi ? " kesildi" : "") + (o.hata ? " hata" : "");
+  const metin = document.createElement("span");
+  metin.textContent = o.metin;
+  el.appendChild(metin);
+  const alt = [];
+  if (o.tur === "kullanici") alt.push(o.kaynak === "ses" ? "Sesle" : "Yazıyla");
+  if (o.tur === "ito" && o.gecikme != null) alt.push(`${o.gecikme.toFixed(2)} sn'de cevap verdi`);
+  if (o.tur === "ito" && o.kesildi) alt.push("Sözü kesildi");
+  if (o.tur === "arac") alt.push(o.kaynak === "panel" ? "Panelden" : "İTO yaptı");
+  if (o.tur !== "bilgi") alt.push(o.zaman);
+  if (alt.length) { const s = document.createElement("small"); s.textContent = alt.join(", "); el.appendChild(s); }
+  akis.appendChild(el);
+  akis.scrollTop = akis.scrollHeight;
+}
+
+document.getElementById("yazForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const girdi = document.getElementById("yazGirdi");
+  const metin = girdi.value.trim();
+  if (!metin) return;
+  girdi.value = "";
+  try {
+    await fetch("/api/soyle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metin }) });
+    yokla();
+  } catch { baglantiYok(); }
+});
+
+yokla();
+setInterval(yokla, 400);
+</script>
+</body>
+</html>
